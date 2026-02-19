@@ -1,0 +1,23 @@
+{
+  "name": "energy-contracts",
+  "version": "1.0.0",
+  "description": "Smart contracts for GridMatrix P2P Energy Trading",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "node": "hardhat node",
+    "deploy": "hardhat run scripts/deploy.cjs --network localhost",
+    "seed": "hardhat run scripts/seed.cjs --network localhost",
+    "deploy:sep": "hardhat run scripts/deploy.cjs --network sepolia",
+    "test": "hardhat test",
+    "clean": "hardhat clean"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@openzeppelin/contracts": "^5.4.0",
+    "hardhat": "^2.28.6"
+  }
+}
