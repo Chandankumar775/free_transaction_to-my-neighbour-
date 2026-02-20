@@ -1,21 +1,96 @@
-﻿import React, { useState } from 'react';
+﻿import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     User, Shield, Bell, Sun, Globe, Wallet, Zap, Copy, Check,
-    Camera, ChevronRight, LogOut, Key, Smartphone, Mail
+    Camera, ChevronRight, LogOut, Key, Smartphone, Mail, Loader2, CheckCircle
 } from 'lucide-react';
+import { getProfile, upsertProfile } from '../lib/supabase';
+import { useWallet } from '../lib/WalletContext';
 
 const roles = [
-    { id: 'prosumer', label: 'Prosumer', desc: 'Produce & consume energy', icon: <Zap className="w-4 h-4" /> },
     { id: 'producer', label: 'Producer', desc: 'Sell energy to the grid', icon: <Sun className="w-4 h-4" /> },
     { id: 'consumer', label: 'Consumer', desc: 'Buy energy from peers', icon: <Globe className="w-4 h-4" /> },
 ];
 
 const Profile: React.FC = () => {
-    const [selectedRole, setSelectedRole] = useState('prosumer');
+    const { address: ctxAddress, setRole: setGlobalRole, disconnect } = useWallet();
+    const navigate = useNavigate();
+    const [walletAddress, setWalletAddress] = useState('');
+    const [selectedRole, setSelectedRole] = useState('producer');
     const [copied, setCopied] = useState(false);
     const [notifications, setNotifications] = useState({ trades: true, rewards: true, updates: false, newsletter: false });
+    const [displayName, setDisplayName] = useState('');
+    const [email, setEmail] = useState('');
+    const [location, setLocation] = useState('');
+    const [gridZone, setGridZone] = useState('Zone-A (North)');
+    const [saving, setSaving] = useState(false);
+    const [saved, setSaved] = useState(false);
+    const [loading, setLoading] = useState(true);
 
-    const handleCopy = () => { navigator.clipboard.writeText('0x7F2e9a1B3c4D5e6F7a8B9c0D1e2F3a4B5c6D7e8F'); setCopied(true); setTimeout(() => setCopied(false), 2000); };
+    // Load wallet + profile on mount
+    useEffect(() => {
+        const load = async () => {
+            try {
+                let addr = ctxAddress;
+                if (!addr) {
+                    const accounts = await (window as any).ethereum?.request({ method: 'eth_accounts' });
+                    addr = accounts?.[0] || '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
+                }
+                setWalletAddress(addr);
+
+                const { data } = await getProfile(addr);
+                if (data) {
+                    setDisplayName(data.display_name || '');
+                    setEmail(data.email || '');
+                    setLocation(data.location || '');
+                    setGridZone(data.grid_zone || 'Zone-A (North)');
+                    setSelectedRole(data.role || 'producer');
+                    setNotifications({
+                        trades: data.notify_trades ?? true,
+                        rewards: data.notify_rewards ?? true,
+                        updates: data.notify_updates ?? false,
+                        newsletter: data.notify_newsletter ?? false,
+                    });
+                }
+            } catch (e) { console.error(e); }
+            setLoading(false);
+        };
+        load();
+    }, [ctxAddress]);
+
+    const handleSave = async () => {
+        setSaving(true); setSaved(false);
+        try {
+            await upsertProfile({
+                wallet_address: walletAddress,
+                display_name: displayName,
+                email,
+                location,
+                grid_zone: gridZone,
+                role: selectedRole,
+                avatar_initials: displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'GU',
+                notify_trades: notifications.trades,
+                notify_rewards: notifications.rewards,
+                notify_updates: notifications.updates,
+                notify_newsletter: notifications.newsletter,
+            });
+            // Propagate role change globally so sidebar + other pages update instantly
+            setGlobalRole(selectedRole as any);
+            setSaved(true);
+            setTimeout(() => setSaved(false), 3000);
+        } catch (e) { console.error(e); alert('Failed to save'); }
+        setSaving(false);
+    };
+
+    const handleCopy = () => { navigator.clipboard.writeText(walletAddress); setCopied(true); setTimeout(() => setCopied(false), 2000); };
+
+    const initials = displayName ? displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'GU';
+
+    if (loading) return (
+        <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 text-[#9FDC56] animate-spin" />
+        </div>
+    );
 
     return (
         <div className="max-w-3xl mx-auto space-y-5">
@@ -28,16 +103,16 @@ const Profile: React.FC = () => {
             <div className="rounded-2xl bg-[#1a1d1a] border border-[#2b2f2b] p-6">
                 <div className="flex items-start gap-5">
                     <div className="relative">
-                        <div className="w-20 h-20 rounded-2xl bg-[#9FDC56] flex items-center justify-center text-2xl font-black text-[#161815] shadow-[0_0_20px_rgba(159,220,86,0.3)]">CK</div>
+                        <div className="w-20 h-20 rounded-2xl bg-[#9FDC56] flex items-center justify-center text-2xl font-black text-[#161815] shadow-[0_0_20px_rgba(159,220,86,0.3)]">{initials}</div>
                         <button className="absolute -bottom-1 -right-1 w-7 h-7 bg-[#EAFFD2] rounded-lg flex items-center justify-center text-[#161815] hover:bg-white transition-colors">
                             <Camera className="w-3.5 h-3.5" />
                         </button>
                     </div>
                     <div className="flex-1 min-w-0">
-                        <h3 className="text-xl font-bold text-[#EAFFD2]">Chandan Kumar</h3>
-                        <p className="text-sm font-medium text-zinc-500 mt-0.5">chandan@gridmatrix.io</p>
+                        <h3 className="text-xl font-bold text-[#EAFFD2]">{displayName || 'Set Your Name'}</h3>
+                        <p className="text-sm font-medium text-zinc-500 mt-0.5">{email || 'Add your email'}</p>
                         <div className="flex items-center gap-2 mt-3">
-                            <span className="text-[10px] font-mono text-zinc-500 bg-[#161815] px-3 py-1.5 rounded-lg border border-[#2b2f2b]">0x7F2e...3a9B</span>
+                            <span className="text-[10px] font-mono text-zinc-500 bg-[#161815] px-3 py-1.5 rounded-lg border border-[#2b2f2b]">{walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Not connected'}</span>
                             <button onClick={handleCopy} className="p-1.5 rounded-lg hover:bg-white/[0.04] text-zinc-500 hover:text-[#EAFFD2] transition-colors">
                                 {copied ? <Check className="w-3.5 h-3.5 text-[#9FDC56]" /> : <Copy className="w-3.5 h-3.5" />}
                             </button>
@@ -53,7 +128,7 @@ const Profile: React.FC = () => {
                     <User className="w-4 h-4 text-zinc-500" />
                     <h3 className="text-sm font-bold text-[#EAFFD2]">Network Role</h3>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                     {roles.map((role) => (
                         <button key={role.id} onClick={() => setSelectedRole(role.id)}
                             className={`p-4 rounded-xl border text-left transition-all ${selectedRole === role.id ? 'bg-[#9FDC56] border-[#9FDC56] shadow-[0_0_15px_rgba(159,220,86,0.2)]' : 'bg-[#161815] border-[#2b2f2b] hover:border-[#3a3e3a]'}`}>
@@ -72,18 +147,31 @@ const Profile: React.FC = () => {
                     <h3 className="text-sm font-bold text-[#EAFFD2]">Personal Information</h3>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                    {[
-                        { label: 'Display Name', value: 'Chandan Kumar', ph: 'Your name' },
-                        { label: 'Email', value: 'chandan@gridmatrix.io', ph: 'Your email' },
-                        { label: 'Location', value: 'Jaipur, India', ph: 'City, Country' },
-                        { label: 'Grid Zone', value: 'Zone-A (North)', ph: '' },
-                    ].map((field, i) => (
-                        <div key={i}>
-                            <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">{field.label}</label>
-                            <input type="text" defaultValue={field.value} placeholder={field.ph}
-                                className="w-full px-4 py-2.5 bg-[#161815] border border-[#2b2f2b] rounded-xl text-sm font-medium placeholder-zinc-700 text-[#EAFFD2] focus:outline-none focus:border-[#9FDC56]/50 transition-colors" />
-                        </div>
-                    ))}
+                    <div>
+                        <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Display Name</label>
+                        <input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Your name"
+                            className="w-full px-4 py-2.5 bg-[#161815] border border-[#2b2f2b] rounded-xl text-sm font-medium placeholder-zinc-700 text-[#EAFFD2] focus:outline-none focus:border-[#9FDC56]/50 transition-colors" />
+                    </div>
+                    <div>
+                        <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Email</label>
+                        <input type="text" value={email} onChange={e => setEmail(e.target.value)} placeholder="Your email"
+                            className="w-full px-4 py-2.5 bg-[#161815] border border-[#2b2f2b] rounded-xl text-sm font-medium placeholder-zinc-700 text-[#EAFFD2] focus:outline-none focus:border-[#9FDC56]/50 transition-colors" />
+                    </div>
+                    <div>
+                        <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Location</label>
+                        <input type="text" value={location} onChange={e => setLocation(e.target.value)} placeholder="City, Country"
+                            className="w-full px-4 py-2.5 bg-[#161815] border border-[#2b2f2b] rounded-xl text-sm font-medium placeholder-zinc-700 text-[#EAFFD2] focus:outline-none focus:border-[#9FDC56]/50 transition-colors" />
+                    </div>
+                    <div>
+                        <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Grid Zone</label>
+                        <select value={gridZone} onChange={e => setGridZone(e.target.value)}
+                            className="w-full px-4 py-2.5 bg-[#161815] border border-[#2b2f2b] rounded-xl text-sm font-medium text-[#EAFFD2] focus:outline-none focus:border-[#9FDC56]/50 transition-colors">
+                            <option value="Zone-A (North)">Zone-A (North)</option>
+                            <option value="Zone-B (South)">Zone-B (South)</option>
+                            <option value="Zone-C (East)">Zone-C (East)</option>
+                            <option value="Zone-D (West)">Zone-D (West)</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -140,8 +228,17 @@ const Profile: React.FC = () => {
 
             {/* Actions */}
             <div className="flex gap-3 pb-6">
-                <button className="flex-1 py-3.5 bg-[#9FDC56] hover:bg-[#8cc34b] text-[#161815] rounded-xl font-bold text-sm transition-all shadow-[0_0_15px_rgba(159,220,86,0.3)]">Save Changes</button>
-                <button className="py-3.5 px-6 border border-[#FF7366]/20 text-[#FF7366] rounded-xl font-bold text-sm hover:bg-[#FF7366]/[0.06] transition-colors flex items-center gap-2">
+                <button onClick={handleSave} disabled={saving}
+                    className="flex-1 py-3.5 bg-[#9FDC56] hover:bg-[#8cc34b] text-[#161815] rounded-xl font-bold text-sm transition-all shadow-[0_0_15px_rgba(159,220,86,0.3)] flex items-center justify-center gap-2 disabled:opacity-50">
+                    {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : saved ? <><CheckCircle className="w-4 h-4" /> Saved!</> : 'Save Changes'}
+                </button>
+                <button
+                    onClick={() => {
+                        try { disconnect(); } catch (e) { console.error('disconnect error', e); }
+                        window.location.href = '/';
+                    }}
+                    className="py-3.5 px-6 border border-[#FF7366]/20 text-[#FF7366] rounded-xl font-bold text-sm hover:bg-[#FF7366]/[0.06] transition-colors flex items-center gap-2 cursor-pointer"
+                >
                     <LogOut className="w-4 h-4" /> Sign Out
                 </button>
             </div>

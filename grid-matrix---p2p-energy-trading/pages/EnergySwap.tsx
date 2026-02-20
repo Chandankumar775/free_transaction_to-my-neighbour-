@@ -1,9 +1,46 @@
 ﻿import React, { useState } from 'react';
-import { ArrowDownUp, Settings, Sun, Wind, Waves, Zap, RefreshCw } from 'lucide-react';
+import { ArrowDownUp, Settings, Sun, Wind, Waves, Zap, RefreshCw, Check, Loader2 } from 'lucide-react';
+
+type TokenType = 'Solar' | 'Wind' | 'Hydro';
+const rates: Record<string, number> = { Solar: 1.02, Wind: 0.98, Hydro: 1.15 };
+const icons: Record<string, React.ReactNode> = {
+    Solar: <Sun size={16} className="text-yellow-500" />,
+    Wind: <Wind size={16} className="text-[#545FFF]" />,
+    Hydro: <Waves size={16} className="text-[#00CED1]" />,
+};
 
 /* ─────────────────── Enhanced Swap Page ─────────────────── */
 const EnergySwap: React.FC = () => {
     const [fromVal, setFromVal] = useState('100');
+    const [fromToken, setFromToken] = useState<TokenType>('Solar');
+    const [toToken, setToToken] = useState<TokenType>('Wind');
+    const [swapping, setSwapping] = useState(false);
+    const [swapOk, setSwapOk] = useState(false);
+    const [balance, setBalance] = useState(24500);
+    
+    const calcOutput = () => {
+        const input = parseFloat(fromVal) || 0;
+        const fromRate = rates[fromToken];
+        const toRate = rates[toToken];
+        return ((input * fromRate) / toRate).toFixed(1);
+    };
+
+    const handleSwap = () => {
+        const input = parseFloat(fromVal) || 0;
+        if (input <= 0 || input > balance) return;
+        setSwapping(true);
+        setTimeout(() => {
+            setBalance(prev => prev - input);
+            setSwapping(false);
+            setSwapOk(true);
+            setTimeout(() => setSwapOk(false), 2500);
+        }, 1200);
+    };
+
+    const flipTokens = () => {
+        setFromToken(toToken);
+        setToToken(fromToken);
+    };
     
     // Quick Chart Component
     const MiniChart = ({ color }: { color: string }) => (
@@ -36,17 +73,22 @@ const EnergySwap: React.FC = () => {
                     <div className="bg-[#161815] border border-[#2b2f2b] p-4 rounded-2xl mb-2 hover:border-[#9FDC56]/30 transition-colors">
                          <div className="flex justify-between mb-2">
                              <span className="text-xs text-zinc-500 font-bold uppercase">From</span>
-                             <span className="text-xs text-[#9FDC56]">Balance: 24,500</span>
+                             <span className="text-xs text-[#9FDC56]">Balance: {balance.toLocaleString()}</span>
                          </div>
                          <div className="flex justify-between items-center">
                              <input 
                                 value={fromVal} 
                                 onChange={e => setFromVal(e.target.value)}
+                                type="number"
                                 className="bg-transparent text-3xl font-black text-white w-full outline-none placeholder-zinc-700" 
                             />
-                             <button className="flex items-center gap-2 bg-[#2b2f2b] hover:bg-[#3a3e3a] px-3 py-1.5 rounded-xl transition-colors shrink-0">
-                                <Sun size={16} className="text-yellow-500" />
-                                <span className="font-bold text-sm">Solar</span>
+                             <button onClick={() => {
+                                const tokens: TokenType[] = ['Solar', 'Wind', 'Hydro'];
+                                const idx = tokens.indexOf(fromToken);
+                                setFromToken(tokens[(idx + 1) % tokens.length]);
+                             }} className="flex items-center gap-2 bg-[#2b2f2b] hover:bg-[#3a3e3a] px-3 py-1.5 rounded-xl transition-colors shrink-0">
+                                {icons[fromToken]}
+                                <span className="font-bold text-sm">{fromToken}</span>
                              </button>
                          </div>
                          <div className="text-xs text-zinc-600 mt-2">$42.00 USD</div>
@@ -54,7 +96,7 @@ const EnergySwap: React.FC = () => {
 
                     {/* Flipper */}
                     <div className="flex justify-center -my-4 relative z-10">
-                        <div className="bg-[#1a1d1a] border border-[#2b2f2b] p-2 rounded-xl text-[#9FDC56] hover:scale-110 transition-transform cursor-pointer">
+                        <div onClick={flipTokens} className="bg-[#1a1d1a] border border-[#2b2f2b] p-2 rounded-xl text-[#9FDC56] hover:scale-110 transition-transform cursor-pointer">
                             <ArrowDownUp size={18} />
                         </div>
                     </div>
@@ -66,20 +108,30 @@ const EnergySwap: React.FC = () => {
                         </div>
                          <div className="flex justify-between items-center">
                              <input 
-                                value="114.2" 
+                                value={calcOutput()} 
                                 readOnly
                                 className="bg-transparent text-3xl font-black text-[#545FFF] w-full outline-none" 
                             />
-                             <button className="flex items-center gap-2 bg-[#2b2f2b] hover:bg-[#3a3e3a] px-3 py-1.5 rounded-xl transition-colors shrink-0">
-                                <Wind size={16} className="text-[#545FFF]" />
-                                <span className="font-bold text-sm">Wind</span>
+                             <button onClick={() => {
+                                const tokens: TokenType[] = ['Solar', 'Wind', 'Hydro'];
+                                const idx = tokens.indexOf(toToken);
+                                setToToken(tokens[(idx + 1) % tokens.length]);
+                             }} className="flex items-center gap-2 bg-[#2b2f2b] hover:bg-[#3a3e3a] px-3 py-1.5 rounded-xl transition-colors shrink-0">
+                                {icons[toToken]}
+                                <span className="font-bold text-sm">{toToken}</span>
                              </button>
                          </div>
-                         <div className="text-xs text-zinc-600 mt-2">Price Impact -0.05%</div>
+                         <div className="text-xs text-zinc-600 mt-2">Price Impact -{(Math.abs(rates[fromToken] - rates[toToken]) * 5).toFixed(2)}%</div>
                     </div>
 
-                    <button className="w-full mt-6 py-4 bg-[#9FDC56] text-[#161815] font-black text-lg rounded-2xl hover:brightness-110 shadow-[0_0_20px_rgba(159,220,86,0.3)] transition-all flex items-center justify-center gap-2">
-                         Swap Energy
+                    {swapOk && (
+                        <div className="mt-4 flex items-center gap-2 p-3 rounded-xl bg-[#9FDC56]/10 border border-[#9FDC56]/20 text-[#9FDC56] text-sm font-bold">
+                            <Check className="w-4 h-4" /> Swap successful! {fromVal} {fromToken} → {calcOutput()} {toToken}
+                        </div>
+                    )}
+
+                    <button onClick={handleSwap} disabled={swapping || !(parseFloat(fromVal) > 0)} className="w-full mt-6 py-4 bg-[#9FDC56] text-[#161815] font-black text-lg rounded-2xl hover:brightness-110 shadow-[0_0_20px_rgba(159,220,86,0.3)] transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                         {swapping ? <><Loader2 className="w-5 h-5 animate-spin" /> Swapping...</> : 'Swap Energy'}
                     </button>
                 </div>
 

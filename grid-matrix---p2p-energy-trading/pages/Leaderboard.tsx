@@ -5,14 +5,32 @@ import { Trophy, Medal, Crown, TrendingUp, Star, ChevronUp, ChevronDown } from '
 const Leaderboard: React.FC = () => {
     const [timeframe, setTimeframe] = useState('weekly');
     
-    // Mock Data
-    const users = [
-        { rank: 1, name: 'SolarKing_99', score: 9850, energy: '12.4 MWh', change: 0, avatar: 'SK' },
-        { rank: 2, name: 'WindRider_Pro', score: 9420, energy: '11.2 MWh', change: 1, avatar: 'WR' },
-        { rank: 3, name: 'GreenNode_X', score: 8990, energy: '10.8 MWh', change: -1, avatar: 'GN' },
-        { rank: 4, name: 'EcoVolt_Alpha', score: 8540, energy: '9.2 MWh', change: 2, avatar: 'EA' },
-        { rank: 5, name: 'Chandan Kumar', score: 7420, energy: '8.1 MWh', change: 0, avatar: 'CK' },
-    ];
+    // Different data per timeframe — makes tabs actually functional
+    type UserRow = { rank: number; name: string; score: number; energy: string; change: number; avatar: string };
+    const dataByTimeframe: Record<string, UserRow[]> = {
+        weekly: [
+            { rank: 1, name: 'SolarKing_99', score: 9850, energy: '12.4 MWh', change: 0, avatar: 'SK' },
+            { rank: 2, name: 'WindRider_Pro', score: 9420, energy: '11.2 MWh', change: 1, avatar: 'WR' },
+            { rank: 3, name: 'GreenNode_X', score: 8990, energy: '10.8 MWh', change: -1, avatar: 'GN' },
+            { rank: 4, name: 'EcoVolt_Alpha', score: 8540, energy: '9.2 MWh', change: 2, avatar: 'EA' },
+            { rank: 5, name: 'Chandan Kumar', score: 7420, energy: '8.1 MWh', change: 0, avatar: 'CK' },
+        ],
+        monthly: [
+            { rank: 1, name: 'GreenNode_X', score: 38200, energy: '44.8 MWh', change: 2, avatar: 'GN' },
+            { rank: 2, name: 'SolarKing_99', score: 36100, energy: '42.1 MWh', change: -1, avatar: 'SK' },
+            { rank: 3, name: 'Chandan Kumar', score: 31050, energy: '35.6 MWh', change: 3, avatar: 'CK' },
+            { rank: 4, name: 'WindRider_Pro', score: 29800, energy: '33.2 MWh', change: -1, avatar: 'WR' },
+            { rank: 5, name: 'EcoVolt_Alpha', score: 27400, energy: '28.5 MWh', change: -1, avatar: 'EA' },
+        ],
+        'all-time': [
+            { rank: 1, name: 'SolarKing_99', score: 248500, energy: '284 MWh', change: 0, avatar: 'SK' },
+            { rank: 2, name: 'GreenNode_X', score: 231800, energy: '265 MWh', change: 0, avatar: 'GN' },
+            { rank: 3, name: 'WindRider_Pro', score: 218400, energy: '247 MWh', change: 1, avatar: 'WR' },
+            { rank: 4, name: 'EcoVolt_Alpha', score: 205100, energy: '232 MWh', change: -1, avatar: 'EA' },
+            { rank: 5, name: 'Chandan Kumar', score: 189200, energy: '215 MWh', change: 2, avatar: 'CK' },
+        ],
+    };
+    const users = dataByTimeframe[timeframe] || dataByTimeframe.weekly;
 
     const podiumColors = ['#FFD700', '#C0C0C0', '#CD7F32'];
 
@@ -40,8 +58,8 @@ const Leaderboard: React.FC = () => {
                  {/* 2nd Place */}
                  <div className="flex flex-col items-center animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
                     <div className="mb-4 flex flex-col items-center">
-                        <div className="w-12 h-12 rounded-full border-2 border-[#C0C0C0] mb-2 flex items-center justify-center font-bold text-[#C0C0C0]">WR</div>
-                        <span className="text-xs font-bold text-zinc-400">WindRider</span>
+                        <div className="w-12 h-12 rounded-full border-2 border-[#C0C0C0] mb-2 flex items-center justify-center font-bold text-[#C0C0C0]">{users[1]?.avatar}</div>
+                        <span className="text-xs font-bold text-zinc-400">{users[1]?.name.split('_')[0]}</span>
                     </div>
                     <div className="w-24 h-32 bg-gradient-to-t from-[#C0C0C0]/20 to-transparent border-t border-x border-[#C0C0C0]/30 rounded-t-lg flex flex-col items-center justify-end pb-4">
                         <span className="text-3xl font-black text-[#C0C0C0]">2</span>
@@ -52,8 +70,8 @@ const Leaderboard: React.FC = () => {
                  <div className="flex flex-col items-center z-10 animate-fade-in-up">
                     <div className="mb-4 flex flex-col items-center">
                         <Crown className="text-[#FFD700] w-8 h-8 mb-2 animate-bounce-slow" />
-                         <div className="w-16 h-16 rounded-full border-4 border-[#FFD700] mb-2 flex items-center justify-center font-bold text-[#FFD700] bg-[#FFD700]/10 ring-4 ring-[#FFD700]/20">SK</div>
-                        <span className="text-sm font-bold text-[#FFD700]">SolarKing</span>
+                         <div className="w-16 h-16 rounded-full border-4 border-[#FFD700] mb-2 flex items-center justify-center font-bold text-[#FFD700] bg-[#FFD700]/10 ring-4 ring-[#FFD700]/20">{users[0]?.avatar}</div>
+                        <span className="text-sm font-bold text-[#FFD700]">{users[0]?.name.split('_')[0]}</span>
                     </div>
                     <div className="w-32 h-48 bg-gradient-to-t from-[#FFD700]/20 to-transparent border-t border-x border-[#FFD700]/30 rounded-t-xl flex flex-col items-center justify-end pb-6 relative overflow-hidden">
                         <div className="absolute inset-0 bg-[#FFD700]/5 animate-pulse" />
@@ -64,8 +82,8 @@ const Leaderboard: React.FC = () => {
                  {/* 3rd Place */}
                  <div className="flex flex-col items-center animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
                     <div className="mb-4 flex flex-col items-center">
-                        <div className="w-12 h-12 rounded-full border-2 border-[#CD7F32] mb-2 flex items-center justify-center font-bold text-[#CD7F32]">GN</div>
-                        <span className="text-xs font-bold text-zinc-400">GreenNode</span>
+                        <div className="w-12 h-12 rounded-full border-2 border-[#CD7F32] mb-2 flex items-center justify-center font-bold text-[#CD7F32]">{users[2]?.avatar}</div>
+                        <span className="text-xs font-bold text-zinc-400">{users[2]?.name.split('_')[0]}</span>
                     </div>
                     <div className="w-24 h-24 bg-gradient-to-t from-[#CD7F32]/20 to-transparent border-t border-x border-[#CD7F32]/30 rounded-t-lg flex flex-col items-center justify-end pb-4">
                         <span className="text-3xl font-black text-[#CD7F32]">3</span>
