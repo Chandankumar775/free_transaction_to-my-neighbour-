@@ -1,12 +1,12 @@
 ﻿import React, { useState } from 'react';
-import { Vote, Clock, CheckCircle, XCircle, Users, Coins, Plus, ThumbsUp, ThumbsDown, AlertCircle } from 'lucide-react';
+import { Vote, Clock, CheckCircle, XCircle, Users, Coins, Plus, ThumbsUp, ThumbsDown, AlertCircle, Check, Loader2 } from 'lucide-react';
 
 interface Proposal {
     id: number; title: string; description: string; status: 'active' | 'passed' | 'rejected' | 'pending';
     votesFor: number; votesAgainst: number; totalVoters: number; endDate: string; author: string; category: string;
 }
 
-const proposals: Proposal[] = [
+const initialProposals: Proposal[] = [
     { id: 1, title: 'Increase Solar Feed-in Tariff by 15%', description: 'Proposal to increase the base feed-in tariff for solar producers from 0.12 to 0.138 GRID tokens per kWh to incentivize more solar installations.', status: 'active', votesFor: 1847, votesAgainst: 423, totalVoters: 2270, endDate: '2025-01-20', author: 'SolarKing_99', category: 'Economics' },
     { id: 2, title: 'Launch Grid Matrix on Polygon zkEVM', description: 'Deploy Grid Matrix smart contracts on Polygon zkEVM for lower gas fees and faster settlement of energy trades.', status: 'active', votesFor: 2156, votesAgainst: 312, totalVoters: 2468, endDate: '2025-01-18', author: 'EcoVolt_Alpha', category: 'Technical' },
     { id: 3, title: 'Create Community Green Fund', description: 'Allocate 2% of all trading fees to a community fund for renewable energy projects in underserved areas.', status: 'passed', votesFor: 3420, votesAgainst: 180, totalVoters: 3600, endDate: '2025-01-10', author: 'GreenNode_X', category: 'Community' },
@@ -22,11 +22,53 @@ const statusConfig: Record<string, { color: string; icon: React.ReactNode; label
 };
 
 const Governance: React.FC = () => {
+    const [proposals, setProposals] = useState<Proposal[]>(initialProposals);
     const [filter, setFilter] = useState('all');
     const [showModal, setShowModal] = useState(false);
+    const [voted, setVoted] = useState<Record<number, 'for' | 'against'>>({});
+    const [newTitle, setNewTitle] = useState('');
+    const [newDesc, setNewDesc] = useState('');
+    const [newCat, setNewCat] = useState('Economics');
+    const [submitting, setSubmitting] = useState(false);
+    const [submitOk, setSubmitOk] = useState(false);
 
     const filtered = filter === 'all' ? proposals : proposals.filter(p => p.status === filter);
     const quorum = 2000;
+
+    const handleVote = (id: number, direction: 'for' | 'against') => {
+        if (voted[id]) return; // already voted
+        setVoted(prev => ({ ...prev, [id]: direction }));
+        setProposals(prev => prev.map(p => {
+            if (p.id !== id) return p;
+            return {
+                ...p,
+                votesFor: direction === 'for' ? p.votesFor + 1 : p.votesFor,
+                votesAgainst: direction === 'against' ? p.votesAgainst + 1 : p.votesAgainst,
+                totalVoters: p.totalVoters + 1,
+            };
+        }));
+    };
+
+    const handleSubmit = () => {
+        if (!newTitle.trim() || !newDesc.trim()) return;
+        setSubmitting(true);
+        setTimeout(() => {
+            const newP: Proposal = {
+                id: Date.now(),
+                title: newTitle,
+                description: newDesc,
+                status: 'pending',
+                votesFor: 0, votesAgainst: 0, totalVoters: 0,
+                endDate: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+                author: 'You',
+                category: newCat,
+            };
+            setProposals(prev => [newP, ...prev]);
+            setSubmitting(false);
+            setSubmitOk(true);
+            setTimeout(() => { setShowModal(false); setNewTitle(''); setNewDesc(''); setSubmitOk(false); }, 1200);
+        }, 800);
+    };
 
     return (
         <div className="space-y-6">
@@ -88,11 +130,13 @@ const Governance: React.FC = () => {
                                 </div>
                                 {p.status === 'active' && (
                                     <div className="flex gap-2 shrink-0">
-                                        <button className="flex items-center gap-1 px-4 py-2 rounded-xl text-xs font-bold bg-[#9FDC56]/10 text-[#9FDC56] hover:bg-[#9FDC56]/20 transition-all">
-                                            <ThumbsUp className="w-3 h-3" /> For
+                                        <button onClick={() => handleVote(p.id, 'for')} disabled={!!voted[p.id]}
+                                            className={`flex items-center gap-1 px-4 py-2 rounded-xl text-xs font-bold transition-all ${voted[p.id] === 'for' ? 'bg-[#9FDC56] text-[#161815]' : voted[p.id] ? 'opacity-40 cursor-not-allowed bg-[#9FDC56]/10 text-[#9FDC56]' : 'bg-[#9FDC56]/10 text-[#9FDC56] hover:bg-[#9FDC56]/20'}`}>
+                                            {voted[p.id] === 'for' ? <Check className="w-3 h-3" /> : <ThumbsUp className="w-3 h-3" />} For
                                         </button>
-                                        <button className="flex items-center gap-1 px-4 py-2 rounded-xl text-xs font-bold bg-[#FF7366]/10 text-[#FF7366] hover:bg-[#FF7366]/20 transition-all">
-                                            <ThumbsDown className="w-3 h-3" /> Against
+                                        <button onClick={() => handleVote(p.id, 'against')} disabled={!!voted[p.id]}
+                                            className={`flex items-center gap-1 px-4 py-2 rounded-xl text-xs font-bold transition-all ${voted[p.id] === 'against' ? 'bg-[#FF7366] text-white' : voted[p.id] ? 'opacity-40 cursor-not-allowed bg-[#FF7366]/10 text-[#FF7366]' : 'bg-[#FF7366]/10 text-[#FF7366] hover:bg-[#FF7366]/20'}`}>
+                                            {voted[p.id] === 'against' ? <Check className="w-3 h-3" /> : <ThumbsDown className="w-3 h-3" />} Against
                                         </button>
                                     </div>
                                 )}
@@ -126,18 +170,24 @@ const Governance: React.FC = () => {
                     <div className="bg-[#1a1d1a] border border-[#2b2f2b] rounded-2xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
                         <h3 className="text-lg font-bold text-[#EAFFD2] mb-4">Create Proposal</h3>
                         <div className="space-y-3">
-                            <input placeholder="Proposal Title" className="w-full px-4 py-3 rounded-xl bg-[#161815] border border-[#2b2f2b] text-[#EAFFD2] text-sm focus:outline-none focus:border-[#9FDC56]" />
-                            <textarea placeholder="Description..." rows={4} className="w-full px-4 py-3 rounded-xl bg-[#161815] border border-[#2b2f2b] text-[#EAFFD2] text-sm focus:outline-none focus:border-[#9FDC56] resize-none" />
-                            <select className="w-full px-4 py-3 rounded-xl bg-[#161815] border border-[#2b2f2b] text-zinc-400 text-sm focus:outline-none focus:border-[#9FDC56]">
-                                <option>Select Category</option>
+                            <input placeholder="Proposal Title" value={newTitle} onChange={e => setNewTitle(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-[#161815] border border-[#2b2f2b] text-[#EAFFD2] text-sm focus:outline-none focus:border-[#9FDC56]" />
+                            <textarea placeholder="Description..." rows={4} value={newDesc} onChange={e => setNewDesc(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-[#161815] border border-[#2b2f2b] text-[#EAFFD2] text-sm focus:outline-none focus:border-[#9FDC56] resize-none" />
+                            <select value={newCat} onChange={e => setNewCat(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-[#161815] border border-[#2b2f2b] text-zinc-400 text-sm focus:outline-none focus:border-[#9FDC56]">
                                 <option>Economics</option>
                                 <option>Technical</option>
                                 <option>Community</option>
                             </select>
                         </div>
+                        {submitOk && (
+                            <div className="mt-3 flex items-center gap-2 p-3 rounded-xl bg-[#9FDC56]/10 border border-[#9FDC56]/20 text-[#9FDC56] text-sm font-bold">
+                                <Check className="w-4 h-4" /> Proposal submitted!
+                            </div>
+                        )}
                         <div className="flex gap-3 mt-5">
                             <button onClick={() => setShowModal(false)} className="flex-1 py-2 rounded-xl text-xs font-bold bg-[#2b2f2b] text-zinc-400 hover:text-[#EAFFD2] transition-all">Cancel</button>
-                            <button onClick={() => setShowModal(false)} className="flex-1 py-2 rounded-xl text-xs font-bold bg-[#9FDC56] text-[#161815] hover:brightness-110 transition-all">Submit</button>
+                            <button onClick={handleSubmit} disabled={submitting || !newTitle.trim()} className="flex-1 py-2 rounded-xl text-xs font-bold bg-[#9FDC56] text-[#161815] hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-1">
+                                {submitting ? <><Loader2 className="w-3 h-3 animate-spin" /> Submitting...</> : 'Submit'}
+                            </button>
                         </div>
                     </div>
                 </div>

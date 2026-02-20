@@ -41,6 +41,7 @@ const IoTSimulator: React.FC = () => {
     const [online, setOnline] = useState(true);
 
     useEffect(() => {
+        if (!online) return; // Stop simulation when offline
         const interval = setInterval(() => {
             setData(prev => ({
                 solarOutput: Math.max(0, prev.solarOutput + randBetween(-0.5, 0.5)),
@@ -56,9 +57,20 @@ const IoTSimulator: React.FC = () => {
                 exported: prev.exported + randBetween(0, 0.02),
                 co2Saved: prev.co2Saved + randBetween(0, 0.01),
             }));
+            // Generate live log entries
+            const now = new Date().toLocaleTimeString('en-US', { hour12: false });
+            const logMsgs = [
+                { msg: `Solar output: ${(11 + Math.random() * 3).toFixed(1)} kW`, type: 'success' as const },
+                { msg: `Battery charging at ${(1.5 + Math.random() * 2).toFixed(1)} kW`, type: 'info' as const },
+                { msg: `Grid frequency: ${(49.97 + Math.random() * 0.06).toFixed(2)} Hz`, type: 'info' as const },
+                { msg: `Exported ${(7 + Math.random() * 2).toFixed(1)} kWh today`, type: 'success' as const },
+                { msg: `Temperature: ${(33 + Math.random() * 4).toFixed(1)}°C`, type: Math.random() > 0.5 ? 'warn' as const : 'info' as const },
+            ];
+            const pick = logMsgs[Math.floor(Math.random() * logMsgs.length)];
+            setLogs(prev => [{ time: now, ...pick }, ...prev.slice(0, 9)]);
         }, 2000);
         return () => clearInterval(interval);
-    }, []);
+    }, [online]);
 
     return (
         <div className="space-y-6">
