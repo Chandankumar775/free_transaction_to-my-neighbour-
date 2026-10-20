@@ -1,10 +1,10 @@
 <div align="center">
 
-# GridMatrix
+<img src="docs/brand/wordmark.webp" alt="GridMatrix" width="100%">
 
 **Peer-to-peer renewable energy trading on Ethereum. Solar and wind producers sell surplus energy straight to their neighbours as tokens, with no utility in the middle.**
 
-K.R. Mangalam University Hackathon 2026
+[Live demo](https://free-transaction-to-my-neighbour-t1.vercel.app) · K.R. Mangalam University Hackathon 2026
 
 <img src="docs/screenshots/landing.webp" alt="GridMatrix landing: The trustless peer-to-peer protocol for the next generation of energy grids" width="100%">
 
